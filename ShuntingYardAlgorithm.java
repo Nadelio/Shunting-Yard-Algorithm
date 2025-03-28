@@ -1,7 +1,7 @@
 import java.util.*;
 import java.util.function.Function;
 
-public class ShuntingYardAlg {
+public class ShuntingYardAlgorithm {
 
     public enum Colors {
         ERROR("\u001B[31m"),
