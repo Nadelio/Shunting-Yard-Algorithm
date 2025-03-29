@@ -226,7 +226,7 @@ public class ShuntingYardAlgorithm {
         System.out.println(Colors.NOTICE + "Enter an expression to evaluate (or 'exit'/'q' to quit):" + Colors.RESET);
         while (true) {
             String input = scanner.nextLine().trim();
-            if (input.equalsIgnoreCase("exit") || input.equalsIgnoreCase("q")) break;
+            if (input.equalsIgnoreCase("exit") || input.equalsIgnoreCase("quit") || input.equalsIgnoreCase("q")) break;
             if (input.equalsIgnoreCase("clear") || input.equalsIgnoreCase("c")) {
                 System.out.print("\033[H\033[2J"); // ANSI escape code to clear the console
                 System.out.flush();
