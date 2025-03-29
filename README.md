@@ -12,3 +12,8 @@ This little playground also has a bunch of QoL stuff for users.
 - `reset/r`: resets the variables
 - `debug/d`: toggles debug mode (logs every evaluation step)
 - `var/variables/v`: prints all the current variables
+
+### Helpful Tips:
+- To get negative numbers on their own, wrap them in parenthesis: `(-1)`
+- Assignments can be nested, but *must* be wrapped in parenthesis to work: `A = (B = 3) * 2`
+- Variables and number literals on their own are valid expressions: `A`, `1`, `-1`
