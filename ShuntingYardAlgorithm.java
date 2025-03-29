@@ -239,8 +239,8 @@ public class ShuntingYardAlgorithm {
                 continue;
             }
             if (input.equalsIgnoreCase("test") || input.equalsIgnoreCase("t")) {
-                String[] testCases = {"1 + 2", "3 - 4", "5 * 6", "7 / 8", "9 % 10", "2 * ( 1 + 4 / 2 )", "1+1", "1/0", "10 % 0", "0/1", "A = 2", "B = A + 2", "A = B", "A = (B = 3) * 2", "A", "B"};
-                Integer[] expectedResults = {3, -1, 30, 0, 9, 6, 2, 0, 0, 0, 2, 4, 4, 6, 6, 3}; // Note: Division by zero and modulo by zero are handled as exceptions, so they will fail, 0 is placeholder
+                String[] testCases = {"1 + 2", "3 - 4", "5 * 6", "7 / 8", "9 % 10", "2 * ( 1 + 4 / 2 )", "1+1", "1/0", "10 % 0", "0/1", "A = 2", "B = A + 2", "A = B", "A = (B = 3) * 2", "A", "B", "A = (-1)"};
+                Integer[] expectedResults = {3, -1, 30, 0, 9, 6, 2, 0, 0, 0, 2, 4, 4, 6, 6, 3, -1}; // Note: Division by zero and modulo by zero are handled as exceptions, so they will fail, 0 is placeholder
         
                 prettyPrint(testCases);
                 evaulateCases(testCases, expectedResults, testCase -> evaluateExpression((String) testCase));
