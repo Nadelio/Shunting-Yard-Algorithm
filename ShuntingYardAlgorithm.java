@@ -18,10 +18,15 @@ public class ShuntingYardAlgorithm {
         public String toString() { return c; }
     }
 
+    public static void log(String message) {
+        System.out.println(Colors.DEBUG + message + Colors.RESET);
+    }
+
     public enum Operations { ADD, SUBTRACT, MULTIPLY, DIVIDE, MODULO }
 
     static Map<String, Integer> precedence = new HashMap<String, Integer>();
     static {
+        precedence.put("=", 0); // goes last
         precedence.put("+", 1);
         precedence.put("-", 1);
         precedence.put("*", 2);
@@ -29,38 +34,50 @@ public class ShuntingYardAlgorithm {
         precedence.put("%", 2);
     }
 
+    public static HashMap<String, Integer> variables = new HashMap<String, Integer>();
+
     public static int evaluateExpression(String expr) {
         Queue<String> postfix = infixToPostfix(expr);
-        return evaluatePostfix(postfix);
+        int result = new Value(evaluatePostfix(postfix)).getValue();
+        return result;
     }
 
     private static Queue<String> infixToPostfix(String expr) {
-        Queue<String> output = new LinkedList<>();
-        Stack<String> operators = new Stack<>();
+        Queue<String> output = new LinkedList<String>();
+        Stack<String> operators = new Stack<String>();
         List<String> tokens = tokenize(expr);
 
         for (String token : tokens) {
-            if (token.matches("\\d+")) { // If token is a number
+            if (token.matches("\\d+|-\\d+")) { // If token is a number (including negative)
                 output.add(token);
             } else if (token.equals("(")) {
-                operators.push(token);
+                operators.push(token); // Push opening parenthesis to the stack
             } else if (token.equals(")")) {
-                while (!operators.isEmpty() && !operators.peek().equals("(")) { output.add(operators.pop()); }
-                operators.pop(); // Remove the "("
-            } else { // Operator
-                while (!operators.isEmpty() && precedence.getOrDefault(operators.peek(), 0) >= precedence.get(token)) {
+                // Pop operators until an opening parenthesis is found
+                while (!operators.isEmpty() && !operators.peek().equals("(")) {
                     output.add(operators.pop());
                 }
-                operators.push(token);
+                operators.pop(); // Remove the opening parenthesis
+            } else if (isOperator(token.charAt(0))) { // Operator
+                // Pop operators with higher or equal precedence
+                while (!operators.isEmpty() && !operators.peek().equals("(") &&
+                        precedence.getOrDefault(operators.peek(), 0) >= precedence.get(token)) {
+                    output.add(operators.pop());
+                }
+                operators.push(token); // Push the current operator
+            } else if (isValidIdent(token)) { // If token is a variable
+                output.add(token);
+            } else {
+                throw new IllegalArgumentException("Invalid token: " + token);
             }
         }
 
-        while (!operators.isEmpty()) { output.add(operators.pop()); }
-
+                while (!operators.isEmpty()) { output.add(operators.pop()); }
         return output;
     }
 
-    private static boolean isOperator(char c) { return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '(' || c == ')'; }
+    private static boolean isOperator(char c) { return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '(' || c == ')' || c == '='; }
+    private static boolean isValidIdent(String token) { return token.matches("[a-zA-Z]");}
 
     private static List<String> tokenize(String expr) {
         List<String> tokens = new ArrayList<>();
@@ -70,7 +87,8 @@ public class ShuntingYardAlgorithm {
             char c = expr.charAt(i);
 
             // Build the number token
-            if (Character.isDigit(c)) {
+            if (Character.isDigit(c) || (c == '-' && (i == 0 || expr.charAt(i - 1) == '('))) {
+                // Include '-' if it's part of a negative number
                 numberBuffer.append(c);
             } else {
                 // If there's a number in the buffer, add it as a token
@@ -80,40 +98,118 @@ public class ShuntingYardAlgorithm {
                 }
 
                 // Add operators and parentheses as tokens
-                if (isOperator(c)) { tokens.add(String.valueOf(c)); }
+                if (isOperator(c)) {
+                    tokens.add(String.valueOf(c));
+                }
+                if (Character.isWhitespace(c)) {
+                    continue; // Ignore whitespace
+                }
+                if (isValidIdent(String.valueOf(c))) {
+                    tokens.add(String.valueOf(c)); // Add variable to tokens
+                }
             }
         }
 
         // Add any remaining number in the buffer as a token
-        if (numberBuffer.length() > 0) { tokens.add(numberBuffer.toString()); }
+        if (numberBuffer.length() > 0) {
+            tokens.add(numberBuffer.toString());
+        }
 
         return tokens;
     }
 
-    private static int evaluatePostfix(Queue<String> postfix) {
-        Stack<Integer> stack = new Stack<>();
+    // variables
+    // integers
+    // operators
+
+    static class Value {
+        String ident;
+        Integer value;
+
+        public Value(String token) {
+            if (token.matches("\\d+|-\\d+")) { // If token is a number (including negative)
+                this.value = Integer.parseInt(token);
+                this.ident = null;
+            } else if (token.matches("[a-zA-Z]")) { // If token is a variable
+                this.ident = token;
+                this.value = null;
+            } else {
+                throw new IllegalArgumentException("Invalid token: " + token);
+            }
+        }
+
+        public boolean isNumber() {
+            return value != null;
+        }
+
+        public boolean isVariable() {
+            return ident != null;
+        }
+
+        public int getValue() {
+            if (isNumber()) return value;
+            if (isVariable()) {
+                if (variables.containsKey(ident)) {
+                    return variables.get(ident);
+                } else {
+                    throw new IllegalArgumentException("Variable '" + ident + "' is not defined.");
+                }
+            }
+            throw new IllegalArgumentException("Invalid value: " + (ident != null ? ident : value));
+        }
+    }
+
+    private static String evaluatePostfix(Queue<String> postfix) {
+        Stack<String> stack = new Stack<String>();
 
         while (!postfix.isEmpty()) {
             String token = postfix.poll();
-            if (token.matches("\\d+")) { // If token is a number
-                stack.push(Integer.parseInt(token));
+            if (token.matches("\\d+|[a-zA-Z]|-\\d+")) { // If token is a number (including negative) or variable
+                stack.push(token);
             } else { // Operator
-                int b = stack.pop();
-                int a = stack.pop();
-                switch (token) {
-                    case "+" -> stack.push(a + b);
-                    case "-" -> stack.push(a - b);
-                    case "*" -> stack.push(a * b);
-                    case "/" -> {
-                        if (b == 0) throw new ArithmeticException("Division by zero is not allowed.");
-                        stack.push(a / b);
+                Value b = new Value(stack.pop());
+                Value a = null; // Initialize 'a' as null
+                if (token.equals("=")) { // For assignment, pop 'a' only if it's a variable
+                    if (!stack.isEmpty()) {
+                        a = new Value(stack.pop());
+                        if (!a.isVariable()) {
+                            throw new IllegalArgumentException("Invalid assignment: left-hand side must be a variable.");
+                        }
+                    } else {
+                        throw new IllegalArgumentException("Invalid assignment: missing left-hand side.");
                     }
-                    case "%" -> {
-                        if (b == 0) throw new ArithmeticException("Modulo by zero is not allowed.");
-                        stack.push(a % b);
+                } else { // For other operators, pop 'a' as needed
+                    if (!stack.isEmpty()) {
+                        a = new Value(stack.pop());
+                    } else {
+                        throw new IllegalArgumentException("Invalid expression: missing operand for operator '" + token + "'");
                     }
                 }
+
+                switch (token) {
+                    case "+" -> stack.push(Integer.toString(a.getValue() + b.getValue()));
+                    case "-" -> stack.push(Integer.toString(a.getValue() - b.getValue()));
+                    case "*" -> stack.push(Integer.toString(a.getValue() * b.getValue()));
+                    case "/" -> {
+                        if (b.getValue() == 0) throw new ArithmeticException("Division by zero is not allowed.");
+                        stack.push(Integer.toString(a.getValue() / b.getValue()));
+                    }
+                    case "%" -> {
+                        if (b.getValue() == 0) throw new ArithmeticException("Modulo by zero is not allowed.");
+                        stack.push(Integer.toString(a.getValue() % b.getValue()));
+                    }
+                    case "=" -> {
+                        int valueToAssign = b.getValue(); // Fetch the value of 'b', whether it's a variable or a number
+                        variables.put(a.ident, valueToAssign); // Store the value in the variable map
+                        stack.push(Integer.toString(valueToAssign)); // Push the assigned value back to the stack as a number
+                    }
+                    default -> throw new IllegalArgumentException("Invalid operator: " + token);
+                }
             }
+        }
+
+        if (stack.size() != 1) {
+            throw new IllegalArgumentException("Invalid expression: stack state is incorrect after evaluation.");
         }
 
         return stack.pop();
