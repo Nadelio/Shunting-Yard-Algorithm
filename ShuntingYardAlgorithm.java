@@ -27,7 +27,7 @@ public class ShuntingYardAlgorithm {
 
     static Map<String, Integer> precedence = new HashMap<String, Integer>();
     static {
-        precedence.put("=", 0); // goes last
+        precedence.put("=", 0); // goes last, unless in parentheses
         precedence.put("+", 1);
         precedence.put("-", 1);
         precedence.put("*", 2);
