@@ -11,3 +11,4 @@ This little playground also has a bunch of QoL stuff for users.
 - `clear/c`: clears the terminal
 - `reset/r`: resets the variables
 - `debug/d`: toggles debug mode (logs every evaluation step)
+- `var/variables/v`: prints all the current variables
