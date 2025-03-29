@@ -221,20 +221,6 @@ public class ShuntingYardAlgorithm {
     public static boolean DEBUG_MODE = false;
 
     public static void main(String[] args) {
-        if(args.length == 1) {
-            String input = args[0].trim();
-            if(input.equalsIgnoreCase("-t") || input.equalsIgnoreCase("--test")) {
-                String[] testCases = {"1 + 2", "3 - 4", "5 * 6", "7 / 8", "9 % 10", "2 * ( 1 + 4 / 2 )", "1+1", "1/0", "10 % 0", "0/1"};
-                Integer[] expectedResults = {3, -1, 30, 0, 9, 6, 2, 0, 0, 0}; // Note: Division by zero and modulo by zero are handled as exceptions, so they will fail, 0 is placeholder
-        
-                prettyPrint(testCases);
-                evaulateCases(testCases, expectedResults, testCase -> evaluateExpression((String) testCase));
-                return;
-            } else {
-                System.out.println(Colors.ERROR + "Invalid argument. Use '-t' or '--test' to run test cases." + Colors.RESET);
-                return;
-            }
-        }
 
         Scanner scanner = new Scanner(System.in);
         System.out.println(Colors.NOTICE + "Enter an expression to evaluate (or 'exit'/'q' to quit):" + Colors.RESET);
