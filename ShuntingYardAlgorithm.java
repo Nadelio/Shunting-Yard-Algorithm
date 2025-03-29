@@ -254,11 +254,13 @@ public class ShuntingYardAlgorithm {
             }
             if (input.equalsIgnoreCase("help") || input.equalsIgnoreCase("h")) {
                 System.out.println(Colors.NOTICE + "Available commands:" + Colors.RESET);
-                System.out.println(Colors.INFO + "  exit/q - Quit the program" + Colors.RESET);
+                System.out.println(Colors.INFO + "  exit/quit/q - Quit the program" + Colors.RESET);
                 System.out.println(Colors.INFO + "  clear/c - Clear the console" + Colors.RESET);
                 System.out.println(Colors.INFO + "  reset/r - Reset variables" + Colors.RESET);
                 System.out.println(Colors.INFO + "  test/t - Run test cases" + Colors.RESET);
                 System.out.println(Colors.INFO + "  debug/d - Toggle debugging mode" + Colors.RESET);
+                System.out.println(Colors.INFO + "  help/h - Show this help message" + Colors.RESET);
+                System.out.println(Colors.INFO + "  variables/var/v - Show current variables" + Colors.RESET);
                 continue;
             }
             if (input.equalsIgnoreCase("variables") || input.equalsIgnoreCase("var") || input.equalsIgnoreCase("v")) {
