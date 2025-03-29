@@ -19,6 +19,7 @@ public class ShuntingYardAlgorithm {
     }
 
     public static void log(String message) {
+        if(!DEBUG_MODE) return;
         System.out.println(Colors.DEBUG + message + Colors.RESET);
     }
 
@@ -162,8 +163,12 @@ public class ShuntingYardAlgorithm {
     private static String evaluatePostfix(Queue<String> postfix) {
         Stack<String> stack = new Stack<String>();
 
+        log("Expression: " + Colors.INFO + postfix.toString());
+
         while (!postfix.isEmpty()) {
             String token = postfix.poll();
+            log("Processing token: " + Colors.INFO + token);
+            log("Stack state: " + Colors.INFO + stack.toString());
             if (token.matches("\\d+|[a-zA-Z]|-\\d+")) { // If token is a number (including negative) or variable
                 stack.push(token);
             } else { // Operator
@@ -208,25 +213,68 @@ public class ShuntingYardAlgorithm {
             }
         }
 
-        if (stack.size() != 1) {
-            throw new IllegalArgumentException("Invalid expression: stack state is incorrect after evaluation.");
-        }
+        if (stack.size() != 1) { throw new IllegalArgumentException("Invalid expression: stack state is incorrect after evaluation."); }
 
         return stack.pop();
     }
 
-    public static void main(String[] args) {
-        String[] testCases = {"1 + 2", "3 - 4", "5 * 6", "7 / 8", "9 % 10", "2 * ( 1 + 4 / 2 )", "1+1", "1/0", "10 % 0", "0/1"};
-        Integer[] expectedResults = {3, -1, 30, 0, 9, 6, 2, 0, 0, 0}; // Note: Division by zero and modulo by zero are handled as exceptions, so they will fail, 0 is placeholder
+    public static boolean DEBUG_MODE = false;
 
-        prettyPrint(testCases);
-        evaulateCases(testCases, expectedResults, testCase -> evaluateExpression((String) testCase));
+    public static void main(String[] args) {
+        if(args.length == 1) {
+            String input = args[0].trim();
+            if(input.equalsIgnoreCase("-t") || input.equalsIgnoreCase("--test")) {
+                String[] testCases = {"1 + 2", "3 - 4", "5 * 6", "7 / 8", "9 % 10", "2 * ( 1 + 4 / 2 )", "1+1", "1/0", "10 % 0", "0/1"};
+                Integer[] expectedResults = {3, -1, 30, 0, 9, 6, 2, 0, 0, 0}; // Note: Division by zero and modulo by zero are handled as exceptions, so they will fail, 0 is placeholder
+        
+                prettyPrint(testCases);
+                evaulateCases(testCases, expectedResults, testCase -> evaluateExpression((String) testCase));
+                return;
+            } else {
+                System.out.println(Colors.ERROR + "Invalid argument. Use '-t' or '--test' to run test cases." + Colors.RESET);
+                return;
+            }
+        }
 
         Scanner scanner = new Scanner(System.in);
         System.out.println(Colors.NOTICE + "Enter an expression to evaluate (or 'exit'/'q' to quit):" + Colors.RESET);
         while (true) {
             String input = scanner.nextLine().trim();
             if (input.equalsIgnoreCase("exit") || input.equalsIgnoreCase("q")) break;
+            if (input.equalsIgnoreCase("clear") || input.equalsIgnoreCase("c")) {
+                System.out.print("\033[H\033[2J"); // ANSI escape code to clear the console
+                System.out.flush();
+                System.out.println(Colors.DEBUG + "Console cleared." + Colors.RESET);
+                continue;
+            }
+            if (input.equalsIgnoreCase("reset") || input.equalsIgnoreCase("r")) {
+                variables.clear();
+                System.out.println(Colors.DEBUG + "Variables reset." + Colors.RESET);
+                continue;
+            }
+            if (input.equalsIgnoreCase("test") || input.equalsIgnoreCase("t")) {
+                String[] testCases = {"1 + 2", "3 - 4", "5 * 6", "7 / 8", "9 % 10", "2 * ( 1 + 4 / 2 )", "1+1", "1/0", "10 % 0", "0/1"};
+                Integer[] expectedResults = {3, -1, 30, 0, 9, 6, 2, 0, 0, 0}; // Note: Division by zero and modulo by zero are handled as exceptions, so they will fail, 0 is placeholder
+        
+                prettyPrint(testCases);
+                evaulateCases(testCases, expectedResults, testCase -> evaluateExpression((String) testCase));
+                continue;
+            }
+            if (input.isEmpty()) continue; // Ignore empty input
+            if (input.equalsIgnoreCase("debug") || input.equalsIgnoreCase("d")) {
+                DEBUG_MODE = !DEBUG_MODE; // Toggle debug mode
+                System.out.println(Colors.DEBUG + "Debugging mode toggled." + Colors.RESET);
+                continue;
+            }
+            if (input.equalsIgnoreCase("help") || input.equalsIgnoreCase("h")) {
+                System.out.println(Colors.NOTICE + "Available commands:" + Colors.RESET);
+                System.out.println(Colors.INFO + "  exit/q - Quit the program" + Colors.RESET);
+                System.out.println(Colors.INFO + "  clear/c - Clear the console" + Colors.RESET);
+                System.out.println(Colors.INFO + "  reset/r - Reset variables" + Colors.RESET);
+                System.out.println(Colors.INFO + "  test/t - Run test cases" + Colors.RESET);
+                System.out.println(Colors.INFO + "  debug/d - Toggle debugging mode" + Colors.RESET);
+                continue;
+            }
             try {
                 int result = evaluateExpression(input);
                 System.out.println(Colors.SUCCESS + "Result: " + Colors.INFO + result + Colors.RESET);
@@ -234,7 +282,7 @@ public class ShuntingYardAlgorithm {
                 System.out.println(Colors.ERROR + "Error: " + Colors.INFO + e.getMessage() + Colors.RESET);
             }
         }
-        System.out.println(Colors.NOTICE + "Exiting the program." + Colors.RESET);
+        System.out.println(Colors.DEBUG + "Exiting the program..." + Colors.RESET);
         scanner.close();
     }
 
