@@ -1,7 +1,5 @@
 # Toy Calculator Language
-This is just a simple calculator language that uses the Shunting Yard Algorithm \:)\
-I might add a way to read from files in the future \:P\
-It would probably read line-by-line like a scripting language, because that's easy, but who knows!\
+This is just a simple calculator language that uses the Shunting Yard Algorithm! \:)\
 This little playground also has a bunch of QoL stuff for users.
 
 ### Syntax:
