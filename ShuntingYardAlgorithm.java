@@ -36,11 +36,35 @@ public class ShuntingYardAlgorithm {
     }
 
     public static HashMap<String, Integer> variables = new HashMap<String, Integer>();
+    static Map<String, FunctionDefinition> functions = new HashMap<>();
+
+    static class FunctionDefinition {
+        List<String> parameters;
+        String expression;
+
+        public FunctionDefinition(List<String> parameters, String expression) {
+            this.parameters = parameters;
+            this.expression = expression;
+        }
+    }
 
     public static int evaluateExpression(String expr) {
-        Queue<String> postfix = infixToPostfix(expr);
-        int result = new Value(evaluatePostfix(postfix)).getValue();
-        return result;
+        if (expr.matches("[a-zA-Z]\\s*\\[\\s*.*\\s*\\]\\s*->\\s*.*")) {
+            expr = expr.replaceAll("\\s+", ""); // Remove all whitespace for function definition
+            // Parse function definition
+            String functionName = expr.substring(0, expr.indexOf('[')).trim();
+            String params = expr.substring(expr.indexOf('[') + 1, expr.indexOf(']')).trim();
+            String expression = expr.substring(expr.indexOf("->") + 2).trim();
+
+            List<String> parameters = Arrays.asList(params.split("\\s*,\\s*"));
+            functions.put(functionName, new FunctionDefinition(parameters, expression));
+            System.out.println(Colors.SUCCESS + "Function '" + functionName + "' defined." + Colors.RESET);
+            return 0; // No result to return for function definition
+        } else {
+            Queue<String> postfix = infixToPostfix(expr);
+            int result = new Value(evaluatePostfix(postfix)).getValue();
+            return result;
+        }
     }
 
     private static Queue<String> infixToPostfix(String expr) {
@@ -59,7 +83,7 @@ public class ShuntingYardAlgorithm {
                     output.add(operators.pop());
                 }
                 operators.pop(); // Remove the opening parenthesis
-            } else if (isOperator(token.charAt(0))) { // Operator
+            } else if (isOperator(token)) { // Operator
                 // Pop operators with higher or equal precedence
                 while (!operators.isEmpty() && !operators.peek().equals("(") &&
                         precedence.getOrDefault(operators.peek(), 0) >= precedence.get(token)) {
@@ -77,7 +101,15 @@ public class ShuntingYardAlgorithm {
         return output;
     }
 
-    private static boolean isOperator(char c) { return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '(' || c == ')' || c == '='; }
+    private static boolean isOperator(char c) {
+        return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '(' || c == ')' || c == '=';
+    }
+
+    private static boolean isOperator(String token) {
+        return token.equals("+") || token.equals("-") || token.equals("*") || token.equals("/") ||
+               token.equals("%") || token.equals("=") || token.equals("<-");
+    }
+
     private static boolean isValidIdent(String token) { return token.matches("[a-zA-Z]");}
 
     private static List<String> tokenize(String expr) {
@@ -89,7 +121,6 @@ public class ShuntingYardAlgorithm {
 
             // Build the number token
             if (Character.isDigit(c) || (c == '-' && (i == 0 || expr.charAt(i - 1) == '('))) {
-                // Include '-' if it's part of a negative number
                 numberBuffer.append(c);
             } else {
                 // If there's a number in the buffer, add it as a token
@@ -98,15 +129,18 @@ public class ShuntingYardAlgorithm {
                     numberBuffer.setLength(0); // Clear the buffer
                 }
 
-                // Add operators and parentheses as tokens
-                if (isOperator(c)) {
+                // Handle the `<-` operator
+                if (c == '<' && i + 1 < expr.length() && expr.charAt(i + 1) == '-') {
+                    tokens.add("<-");
+                    i++; // Skip the next character ('-')
+                } else if (isOperator(c)) {
                     tokens.add(String.valueOf(c));
-                }
-                if (Character.isWhitespace(c)) {
+                } else if (Character.isWhitespace(c)) {
                     continue; // Ignore whitespace
-                }
-                if (isValidIdent(String.valueOf(c))) {
-                    tokens.add(String.valueOf(c)); // Add variable to tokens
+                } else if (isValidIdent(String.valueOf(c))) {
+                    tokens.add(String.valueOf(c)); // Add variable or function name to tokens
+                } else {
+                    throw new IllegalArgumentException("Invalid token: " + c);
                 }
             }
         }
@@ -161,7 +195,7 @@ public class ShuntingYardAlgorithm {
     }
 
     private static String evaluatePostfix(Queue<String> postfix) {
-        Stack<String> stack = new Stack<String>();
+        Stack<String> stack = new Stack<>();
 
         log("Expression: " + Colors.INFO + postfix.toString());
 
@@ -169,27 +203,62 @@ public class ShuntingYardAlgorithm {
             String token = postfix.poll();
             log("Processing token: " + Colors.INFO + token);
             log("Stack state: " + Colors.INFO + stack.toString());
+
             if (token.matches("\\d+|[a-zA-Z]|-\\d+")) { // If token is a number (including negative) or variable
                 stack.push(token);
-            } else { // Operator
-                Value b = new Value(stack.pop());
-                Value a = null; // Initialize 'a' as null
-                if (token.equals("=")) { // For assignment, pop 'a' only if it's a variable
-                    if (!stack.isEmpty()) {
-                        a = new Value(stack.pop());
-                        if (!a.isVariable()) {
-                            throw new IllegalArgumentException("Invalid assignment: left-hand side must be a variable.");
-                        }
-                    } else {
-                        throw new IllegalArgumentException("Invalid assignment: missing left-hand side.");
-                    }
-                } else { // For other operators, pop 'a' as needed
-                    if (!stack.isEmpty()) {
-                        a = new Value(stack.pop());
-                    } else {
-                        throw new IllegalArgumentException("Invalid expression: missing operand for operator '" + token + "'");
-                    }
+            } else if (token.equals("<-")) { // Function call using the new syntax
+                if (stack.size() < 2) {
+                    throw new IllegalArgumentException("Invalid expression: missing function or argument for '<-' operator.");
                 }
+
+                String argument = stack.pop();
+                String functionName = stack.pop();
+
+                if (!functions.containsKey(functionName)) {
+                    throw new IllegalArgumentException("Function '" + functionName + "' is not defined.");
+                }
+
+                FunctionDefinition function = functions.get(functionName);
+
+                // Resolve the argument (if it's a variable, get its value)
+                String resolvedArgument;
+                if (variables.containsKey(argument)) {
+                    resolvedArgument = String.valueOf(variables.get(argument).intValue());
+                } else if (argument.matches("-?\\d+")) { // If it's already a number
+                    resolvedArgument = argument;
+                } else {
+                    throw new IllegalArgumentException("Invalid argument: '" + argument + "' is not a valid number or variable.");
+                }
+
+                List<String> arguments = Arrays.asList(resolvedArgument);
+
+                if (arguments.size() != function.parameters.size()) {
+                    throw new IllegalArgumentException("Function '" + functionName + "' expects " + function.parameters.size() + " arguments, but got " + arguments.size() + ".");
+                }
+
+                // Temporarily store variable values
+                HashMap<String, Integer> tempVariables = new HashMap<String, Integer>(variables);
+
+                // Assign arguments to parameters
+                for (int i = 0; i < function.parameters.size(); i++) {
+                    variables.put(function.parameters.get(i), Integer.parseInt(arguments.get(i).trim()));
+                }
+
+                // Evaluate the function expression
+                int result = evaluateExpression(function.expression);
+
+                // Restore original variables
+                variables = tempVariables;
+
+                // Push the result of the function evaluation onto the stack
+                stack.push(Integer.toString(result));
+            } else { // Operator
+                if (stack.size() < 2) {
+                    throw new IllegalArgumentException("Invalid expression: missing operand for operator '" + token + "'");
+                }
+
+                Value b = new Value(stack.pop());
+                Value a = new Value(stack.pop());
 
                 switch (token) {
                     case "+" -> stack.push(Integer.toString(a.getValue() + b.getValue()));
@@ -204,21 +273,26 @@ public class ShuntingYardAlgorithm {
                         stack.push(Integer.toString(a.getValue() % b.getValue()));
                     }
                     case "=" -> {
-                        int valueToAssign = b.getValue(); // Fetch the value of 'b', whether it's a variable or a number
-                        variables.put(a.ident, valueToAssign); // Store the value in the variable map
-                        stack.push(Integer.toString(valueToAssign)); // Push the assigned value back to the stack as a number
+                        if (!a.isVariable()) {
+                            throw new IllegalArgumentException("Invalid assignment: left-hand side must be a variable.");
+                        }
+                        int valueToAssign = b.getValue();
+                        variables.put(a.ident, valueToAssign);
+                        stack.push(Integer.toString(valueToAssign));
                     }
                     default -> throw new IllegalArgumentException("Invalid operator: " + token);
                 }
             }
         }
 
-        if (stack.size() != 1) { throw new IllegalArgumentException("Invalid expression: stack state is incorrect after evaluation."); }
+        if (stack.size() != 1) {
+            throw new IllegalArgumentException("Invalid expression: stack state is incorrect after evaluation.");
+        }
 
         return stack.pop();
     }
 
-    public static boolean DEBUG_MODE = false;
+    public static boolean DEBUG_MODE = true;
 
     public static void main(String[] args) {
 
@@ -236,6 +310,8 @@ public class ShuntingYardAlgorithm {
             if (input.equalsIgnoreCase("reset") || input.equalsIgnoreCase("r")) {
                 variables.clear();
                 System.out.println(Colors.DEBUG + "Variables reset." + Colors.RESET);
+                functions.clear();
+                System.out.println(Colors.DEBUG + "Functions reset." + Colors.RESET);
                 continue;
             }
             if (input.equalsIgnoreCase("test") || input.equalsIgnoreCase("t")) {
@@ -256,17 +332,39 @@ public class ShuntingYardAlgorithm {
                 System.out.println(Colors.NOTICE + "Available commands:" + Colors.RESET);
                 System.out.println(Colors.INFO + "  exit/quit/q - Quit the program" + Colors.RESET);
                 System.out.println(Colors.INFO + "  clear/c - Clear the console" + Colors.RESET);
-                System.out.println(Colors.INFO + "  reset/r - Reset variables" + Colors.RESET);
+                System.out.println(Colors.INFO + "  reset/r - Reset variables and functions" + Colors.RESET);
                 System.out.println(Colors.INFO + "  test/t - Run test cases" + Colors.RESET);
                 System.out.println(Colors.INFO + "  debug/d - Toggle debugging mode" + Colors.RESET);
                 System.out.println(Colors.INFO + "  help/h - Show this help message" + Colors.RESET);
-                System.out.println(Colors.INFO + "  variables/var/v - Show current variables" + Colors.RESET);
+                System.out.println(Colors.INFO + "  variables/var/v - Show current variables and functions" + Colors.RESET);
+                System.out.println(Colors.INFO + "  file/f - Evaluate the lines of a file" + Colors.RESET);
                 continue;
             }
             if (input.equalsIgnoreCase("variables") || input.equalsIgnoreCase("var") || input.equalsIgnoreCase("v")) {
                 System.out.println(Colors.DEBUG + "Current variables:" + Colors.RESET);
                 for(Map.Entry<String, Integer> entry : variables.entrySet()) {
                     System.out.println("  " + Colors.INFO + entry.getKey() + Colors.DEBUG + " : " + Colors.INFO + entry.getValue() + Colors.RESET);
+                }
+                System.out.println(Colors.DEBUG + "Current functions:" + Colors.RESET);
+                for(Map.Entry<String, FunctionDefinition> entry : functions.entrySet()) {
+                    System.out.println("  " + Colors.INFO + entry.getKey() + Colors.DEBUG + " : " + Colors.INFO + entry.getValue().expression + Colors.RESET);
+                }
+                continue;
+            }
+            if (input.equalsIgnoreCase("file") || input.equalsIgnoreCase("f")) {
+                System.out.println(Colors.NOTICE + "Enter the file path:" + Colors.RESET);
+                String filePath = scanner.nextLine().trim();
+                try (Scanner fileScanner = new Scanner(new java.io.File(filePath))) {
+                    while (fileScanner.hasNextLine()) {
+                        String line = fileScanner.nextLine().trim();
+                        if (!line.isEmpty()) {
+                            System.out.println(Colors.DEBUG + "Evaluating line: " + Colors.INFO + line + Colors.RESET);
+                            int result = evaluateExpression(line);
+                            System.out.println(Colors.SUCCESS + "Result: " + Colors.INFO + result + Colors.RESET);
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println(Colors.ERROR + "Error when reading from file: " + Colors.INFO + filePath + Colors.ERROR + " : " + Colors.INFO + e.getMessage() + Colors.RESET);
                 }
                 continue;
             }
