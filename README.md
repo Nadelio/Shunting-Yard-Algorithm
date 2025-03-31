@@ -5,8 +5,8 @@ It would probably read line-by-line like a scripting language, because that's ea
 This little playground also has a bunch of QoL stuff for users.
 
 ### Syntax:
-`<char>` - Any single character is a variable
-`<char>[<char>*] -> <expr>` - Syntax for functions, parameters are optional
+`<char>` - Any single character is a variable\
+`<char>[<char>*] -> <expr>` - Syntax for functions, parameters are optional\
 `<function name> <- <variable/number>*` - Function call
 
 ### Commands:
