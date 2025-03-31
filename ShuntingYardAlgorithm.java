@@ -38,7 +38,7 @@ public class ShuntingYardAlgorithm {
     public static HashMap<String, Integer> variables = new HashMap<String, Integer>();
     static Map<String, FunctionDefinition> functions = new HashMap<>();
 
-    static class FunctionDefinition {
+    static class FunctionDefinition { //? maybe in the future differentiate between functions that return a value and functions that return a function
         List<String> parameters;
         String expression;
 
@@ -251,7 +251,7 @@ public class ShuntingYardAlgorithm {
                 variables = tempVariables;
 
                 // Push the result of the function evaluation onto the stack
-                stack.push(Integer.toString(result));
+                stack.push(Integer.toString(result)); //? this would need to change if I allow functions to return functions
             } else { // Operator
                 if (stack.size() < 2) {
                     throw new IllegalArgumentException("Invalid expression: missing operand for operator '" + token + "'");
